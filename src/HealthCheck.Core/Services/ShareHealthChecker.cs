@@ -38,12 +38,21 @@ public sealed class ShareHealthChecker : IShareHealthChecker
             SmallFilesCount = _config.SmallFilesCount
         };
 
+        string? testFilePath = null;
+
         try
         {
             EnsureHealthDirectoryExists();
 
+            // Capacity
             UpdateCapacity(result);
-            var testFilePath = Path.Combine(_config.HealthDirectory, "fs_health_test.bin");
+
+            // קובץ מבחן חדש בכל ריצה
+            var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmssfff");
+            var testFileName = $"fs_health_test_{timestamp}.bin";
+            testFilePath = Path.Combine(_config.HealthDirectory, testFileName);
+
+            // Write / Read / small IO על הקובץ הזה
             RunWriteTest(testFilePath, result);
             RunReadTest(testFilePath, result);
             RunSmallFilesTest(result);
@@ -55,7 +64,25 @@ public sealed class ShareHealthChecker : IShareHealthChecker
         catch (Exception ex)
         {
             result.Success = false;
-            result.ErrorMessage = ex.ToString();
+            AppendError(result, ex);
+        }
+        finally
+        {
+            if (testFilePath != null)
+            {
+                try
+                {
+                    if (File.Exists(testFilePath))
+                    {
+                        File.Delete(testFilePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // לא נכשיל את כל הריצה בגלל מחיקה, אבל נוסיף ללוג
+                    AppendError(result, ex);
+                }
+            }
         }
 
         return result;
@@ -73,10 +100,10 @@ public sealed class ShareHealthChecker : IShareHealthChecker
 
     private void UpdateCapacity(ShareHealthResult result)
     {
-        // גרסה פשוטה – מניחים ש-SharePath הוא drive כמו Z:\
-        var root = Path.GetPathRoot(_config.SharePath)
+        var root = _config.SharePath
                    ?? throw new InvalidOperationException($"Cannot get root from '{_config.SharePath}'.");
 
+        // DriveInfo(root) עובד גם ב-Windows וגם ב-Linux על ה-mount המתאים
         var drive = new DriveInfo(root);
         long totalBytes = drive.TotalSize;
         long freeBytes = drive.AvailableFreeSpace;
@@ -147,45 +174,23 @@ public sealed class ShareHealthChecker : IShareHealthChecker
         var fileInfo = new FileInfo(testFilePath);
         long fileSize = fileInfo.Length;
 
-        // 1) קריאה רגילה (cached)
+        if (fileSize <= 0)
         {
-            byte[] buffer = new byte[1024 * 1024]; // 1MB
-            var sw = Stopwatch.StartNew();
-            long totalRead = 0;
-
-            using (var fs = new FileStream(
-                       testFilePath,
-                       FileMode.Open,
-                       FileAccess.Read,
-                       FileShare.Read,
-                       bufferSize: buffer.Length,
-                       options: FileOptions.SequentialScan))
-            {
-                int read;
-                while ((read = fs.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    totalRead += read;
-                }
-            }
-
-            sw.Stop();
-            double seconds = sw.Elapsed.TotalSeconds;
-            if (seconds <= 0) seconds = 0.000001;
-
-            double throughput = totalRead / seconds;
-
-            result.ReadDurationSeconds = seconds;
-            result.ReadThroughputBytesPerSecond = throughput;
+            result.ReadUnbufferedDurationSeconds = null;
+            result.ReadUnbufferedThroughputBytesPerSecond = null;
+            return;
         }
 
-        // 2) קריאה unbuffered (ללא cache של file system)
+        // פה אנחנו עושים רק "מדידת read אחת":
+        // - ב-Windows: unbuffered אמיתי
+        // - ב-Linux: קריאה רגילה (SequentialScan) – best effort
+        if (OperatingSystem.IsWindows())
         {
             const int sectorSize = 4096;
             long alignedSize = fileSize - (fileSize % sectorSize);
 
             if (alignedSize <= 0)
             {
-                // אם מסיבה כלשהי הגודל לא מתאים – לא מודדים unbuffered
                 result.ReadUnbufferedDurationSeconds = null;
                 result.ReadUnbufferedThroughputBytesPerSecond = null;
                 return;
@@ -218,8 +223,38 @@ public sealed class ShareHealthChecker : IShareHealthChecker
             result.ReadUnbufferedDurationSeconds = seconds;
             result.ReadUnbufferedThroughputBytesPerSecond = throughput;
         }
-    }
+        else
+        {
+            // Linux / כל OS אחר – קריאה רגילה, אבל זו המדידה היחידה שלנו
+            byte[] buffer = new byte[1024 * 1024]; // 1MB
+            var sw = Stopwatch.StartNew();
+            long totalRead = 0;
 
+            using (var fs = new FileStream(
+                       testFilePath,
+                       FileMode.Open,
+                       FileAccess.Read,
+                       FileShare.Read,
+                       bufferSize: buffer.Length,
+                       options: FileOptions.SequentialScan))
+            {
+                int read;
+                while ((read = fs.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    totalRead += read;
+                }
+            }
+
+            sw.Stop();
+            double seconds = sw.Elapsed.TotalSeconds;
+            if (seconds <= 0) seconds = 0.000001;
+
+            double throughput = totalRead / seconds;
+
+            result.ReadUnbufferedDurationSeconds = seconds;
+            result.ReadUnbufferedThroughputBytesPerSecond = throughput;
+        }
+    }
 
     #endregion
 
@@ -287,6 +322,7 @@ public sealed class ShareHealthChecker : IShareHealthChecker
             bufferSize: bufferSize,
             isAsync: false);
     }
+
     private void RunSmallIoLatencyTest(string testFilePath, ShareHealthResult result)
     {
         try
@@ -353,8 +389,8 @@ public sealed class ShareHealthChecker : IShareHealthChecker
         {
             var sw = Stopwatch.StartNew();
 
-            var dir = _config.SharePath; 
-                                        
+            var dir = _config.SharePath;
+
             _ = Directory.EnumerateFileSystemEntries(dir).ToList();
 
             sw.Stop();

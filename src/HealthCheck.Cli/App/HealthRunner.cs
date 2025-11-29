@@ -99,26 +99,16 @@ public sealed class HealthRunner
             Log("Write: N/A");
         }
 
-        // Read (cached)
-        if (res.ReadDurationSeconds.HasValue && res.ReadThroughputBytesPerSecond.HasValue)
-        {
-            double mbps = res.ReadThroughputBytesPerSecond.Value / 1024d / 1024d;
-            Log($"Read (cached): duration={res.ReadDurationSeconds.Value:F4}s, throughput={mbps:F2} MB/s.");
-        }
-        else
-        {
-            Log("Read (cached): N/A");
-        }
-
-        // Read (unbuffered)
-        if (res.ReadUnbufferedDurationSeconds.HasValue && res.ReadUnbufferedThroughputBytesPerSecond.HasValue)
+        // Read – המדידה היחידה (ב-Windows unbuffered, ב-Linux best-effort)
+        if (res.ReadUnbufferedDurationSeconds.HasValue &&
+            res.ReadUnbufferedThroughputBytesPerSecond.HasValue)
         {
             double mbpsUnbuffered = res.ReadUnbufferedThroughputBytesPerSecond.Value / 1024d / 1024d;
-            Log($"Read (unbuffered): duration={res.ReadUnbufferedDurationSeconds.Value:F4}s, throughput={mbpsUnbuffered:F2} MB/s.");
+            Log($"Read: duration={res.ReadUnbufferedDurationSeconds.Value:F4}s, throughput={mbpsUnbuffered:F2} MB/s.");
         }
         else
         {
-            Log("Read (unbuffered): N/A");
+            Log("Read: N/A");
         }
 
         // Small files
