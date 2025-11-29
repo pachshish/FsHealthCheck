@@ -1,5 +1,6 @@
 ﻿using HealthCheck.Core.Models;
 using Prometheus;
+using System.Reflection.Emit;
 
 namespace HealthCheck.Exporter;
 
@@ -31,9 +32,33 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
     private static readonly Gauge SmallDeleteOps =
         Metrics.CreateGauge("fs_share_smallfiles_delete_ops_per_sec", "Small files delete ops/sec per share", new[] { "share" });
 
+    private static readonly Gauge SmallReadLatencyMs =
+        Metrics.CreateGauge(
+            "fs_share_small_read_latency_ms",
+            "Small 4KB read latency (ms) per share",
+            new GaugeConfiguration { LabelNames = new[] { "share" } });
+
+    private static readonly Gauge SmallWriteLatencyMs =
+        Metrics.CreateGauge(
+            "fs_share_small_write_latency_ms",
+            "Small 4KB write latency (ms) per share",
+            new GaugeConfiguration { LabelNames = new[] { "share" } });
+
+    private static readonly Gauge DirectoryListDurationSeconds =
+        Metrics.CreateGauge(
+            "fs_share_dirlist_duration_seconds",
+            "Directory listing duration (seconds) for representative directory per share",
+            new GaugeConfiguration { LabelNames = new[] { "share" } });
+
+    private static readonly Counter IoErrorsTotal =
+        Metrics.CreateCounter(
+            "fs_share_io_errors_total",
+            "Total I/O errors encountered during health checks per share",
+            new CounterConfiguration { LabelNames = new[] { "share" } });
+
     public void UpdateMetrics(ShareHealthResult res)
     {
-        var label = res.ShareName;
+        var labels = new[] { res.ShareName };
 
         if (!res.Success)
         {
@@ -42,24 +67,37 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
         }
 
         if (res.FreeRatio.HasValue)
-            FreeRatio.WithLabels(label).Set(res.FreeRatio.Value);
+            FreeRatio.WithLabels(labels).Set(res.FreeRatio.Value);
 
         if (res.FreeBytes.HasValue)
-            FreeBytes.WithLabels(label).Set(res.FreeBytes.Value);
+            FreeBytes.WithLabels(labels).Set(res.FreeBytes.Value);
 
         if (res.TotalBytes.HasValue)
-            TotalBytes.WithLabels(label).Set(res.TotalBytes.Value);
+            TotalBytes.WithLabels(labels).Set(res.TotalBytes.Value);
 
         if (res.WriteThroughputBytesPerSecond.HasValue)
-            WriteThroughput.WithLabels(label).Set(res.WriteThroughputBytesPerSecond.Value);
+            WriteThroughput.WithLabels(labels).Set(res.WriteThroughputBytesPerSecond.Value);
 
         if (res.ReadUnbufferedThroughputBytesPerSecond.HasValue)
-            ReadUnbufferedThroughput.WithLabels(label).Set(res.ReadUnbufferedThroughputBytesPerSecond.Value);
+            ReadUnbufferedThroughput.WithLabels(labels).Set(res.ReadUnbufferedThroughputBytesPerSecond.Value);
 
         if (res.SmallCreateOpsPerSecond.HasValue)
-            SmallCreateOps.WithLabels(label).Set(res.SmallCreateOpsPerSecond.Value);
+            SmallCreateOps.WithLabels(labels).Set(res.SmallCreateOpsPerSecond.Value);
 
         if (res.SmallDeleteOpsPerSecond.HasValue)
-            SmallDeleteOps.WithLabels(label).Set(res.SmallDeleteOpsPerSecond.Value);
+            SmallDeleteOps.WithLabels(labels).Set(res.SmallDeleteOpsPerSecond.Value);
+
+        if (res.SmallReadLatencyMs.HasValue)
+            SmallReadLatencyMs.WithLabels(labels).Set(res.SmallReadLatencyMs.Value);
+
+        if (res.SmallWriteLatencyMs.HasValue)
+            SmallWriteLatencyMs.WithLabels(labels).Set(res.SmallWriteLatencyMs.Value);
+
+        if (res.DirectoryListDurationSeconds.HasValue)
+            DirectoryListDurationSeconds.WithLabels(labels).Set(res.DirectoryListDurationSeconds.Value);
+
+        // ✅ חדשים – errors: counter → מוסיפים את הכמות של הריצה הזו
+        if (res.IoErrorCount > 0)
+            IoErrorsTotal.WithLabels(labels).Inc(res.IoErrorCount);
     }
 }

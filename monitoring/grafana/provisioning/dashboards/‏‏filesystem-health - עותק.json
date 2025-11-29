@@ -5,31 +5,30 @@
   "tags": [ "filesystem", "health", "fs_health" ],
   "timezone": "browser",
   "schemaVersion": 36,
-  "version": 4,
+  "version": 1,
   "refresh": "30s",
   "style": "dark",
   "editable": true,
   "panels": [
     {
       "type": "timeseries",
-      "title": "Free & Used space (%)",
+      "title": "Free space (%)",
       "id": 1,
       "gridPos": {
         "x": 0,
         "y": 0,
         "w": 12,
-        "h": 7
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
       },
       "targets": [
         {
-          "expr": "(1 - fs_share_free_ratio) * 100",
-          "legendFormat": "used {{share}}",
-          "refId": "A"
-        },
-        {
           "expr": "fs_share_free_ratio * 100",
-          "legendFormat": "free {{share}}",
-          "refId": "B"
+          "legendFormat": "{{share}}",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
@@ -37,21 +36,24 @@
           "unit": "percent",
           "min": 0,
           "max": 100,
-          "color": { "mode": "thresholds" },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": 0
               },
               {
-                "color": "yellow",
-                "value": 80
+                "color": "red",
+                "value": 10
               },
               {
-                "color": "red",
-                "value": 90
+                "color": "yellow",
+                "value": 20
+              },
+              {
+                "color": "green",
+                "value": 30
               }
             ]
           }
@@ -68,18 +70,22 @@
     },
     {
       "type": "timeseries",
-      "title": "Used vs Free (GB)",
+      "title": "Capacity (GB)",
       "id": 2,
       "gridPos": {
         "x": 12,
         "y": 0,
         "w": 12,
-        "h": 7
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
       },
       "targets": [
         {
-          "expr": "(fs_share_total_bytes - fs_share_free_bytes) / 1024 / 1024 / 1024",
-          "legendFormat": "used {{share}}",
+          "expr": "fs_share_total_bytes / 1024 / 1024 / 1024",
+          "legendFormat": "total {{share}}",
           "refId": "A"
         },
         {
@@ -105,24 +111,59 @@
     },
     {
       "type": "timeseries",
-      "title": "Read & Write throughput (MB/s)",
-      "id": 5,
+      "title": "Write throughput (MB/s)",
+      "id": 3,
       "gridPos": {
         "x": 0,
-        "y": 7,
-        "w": 24,
-        "h": 7
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
       },
       "targets": [
         {
           "expr": "fs_share_write_throughput_bytes / 1024 / 1024",
-          "legendFormat": "write {{share}}",
+          "legendFormat": "{{share}}",
           "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "MBps",
+          "min": 0
         },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Read throughput (unbuffered MB/s)",
+      "id": 4,
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
         {
           "expr": "fs_share_read_unbuffered_throughput_bytes / 1024 / 1024",
-          "legendFormat": "read (unbuffered) {{share}}",
-          "refId": "B"
+          "legendFormat": "{{share}}",
+          "refId": "A"
         }
       ],
       "fieldConfig": {
@@ -143,12 +184,16 @@
     {
       "type": "timeseries",
       "title": "Small files ops/sec (create & delete)",
-      "id": 7,
+      "id": 5,
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 16,
         "w": 24,
-        "h": 7
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
       },
       "targets": [
         {
@@ -176,114 +221,20 @@
         },
         "tooltip": { "mode": "single" }
       }
-    },
-    {
-      "type": "timeseries",
-      "title": "Small IO latency (ms)",
-      "id": 8,
-      "gridPos": {
-        "x": 0,
-        "y": 21,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
-        {
-          "expr": "fs_share_small_read_latency_ms",
-          "legendFormat": "read {{share}}",
-          "refId": "A"
-        },
-        {
-          "expr": "fs_share_small_write_latency_ms",
-          "legendFormat": "write {{share}}",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ms",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": { "mode": "single" }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "Directory listing duration (s)",
-      "id": 9,
-      "gridPos": {
-        "x": 12,
-        "y": 21,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
-        {
-          "expr": "fs_share_dirlist_duration_seconds",
-          "legendFormat": "{{share}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": { "mode": "single" }
-      }
-    },
-    {
-      "type": "timeseries",
-      "title": "I/O errors (per minute)",
-      "id": 10,
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 24,
-        "h": 7
-      },
-      "targets": [
-        {
-          "expr": "rate(fs_share_io_errors_total[5m]) * 60",
-          "legendFormat": "{{share}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": { "mode": "single" }
-      }
     }
   ],
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [ "5s", "10s", "30s", "1m", "5m", "15m" ]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
   }
 }

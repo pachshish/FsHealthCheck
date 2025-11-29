@@ -25,4 +25,9 @@ public sealed class ShareHealthResult
     public double? SmallCreateOpsPerSecond { get; set; }
     public double? SmallDeleteDurationSeconds { get; set; }
     public double? SmallDeleteOpsPerSecond { get; set; }
+
+    public double? SmallWriteLatencyMs { get; set; }
+    public double? SmallReadLatencyMs { get; set; }
+    public double? DirectoryListDurationSeconds { get; set; }
+    public int IoErrorCount { get; set; }
 }

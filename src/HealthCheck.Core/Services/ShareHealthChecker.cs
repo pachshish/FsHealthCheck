@@ -2,7 +2,6 @@
 using HealthCheck.Core.Services;
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace HealthCheck.Services;
@@ -44,11 +43,12 @@ public sealed class ShareHealthChecker : IShareHealthChecker
             EnsureHealthDirectoryExists();
 
             UpdateCapacity(result);
-
             var testFilePath = Path.Combine(_config.HealthDirectory, "fs_health_test.bin");
             RunWriteTest(testFilePath, result);
             RunReadTest(testFilePath, result);
             RunSmallFilesTest(result);
+            RunSmallIoLatencyTest(testFilePath, result);
+            RunDirectoryListingTest(result);
 
             result.Success = true;
         }
@@ -287,5 +287,90 @@ public sealed class ShareHealthChecker : IShareHealthChecker
             bufferSize: bufferSize,
             isAsync: false);
     }
+    private void RunSmallIoLatencyTest(string testFilePath, ShareHealthResult result)
+    {
+        try
+        {
+            var buffer = new byte[4096];
+            new Random().NextBytes(buffer);
+
+            // Write latency (4KB)
+            var sw = Stopwatch.StartNew();
+            using (var fs = new FileStream(
+                       testFilePath,
+                       FileMode.OpenOrCreate,
+                       FileAccess.Write,
+                       FileShare.None))
+            {
+                fs.Position = 0;
+                fs.Write(buffer, 0, buffer.Length);
+                fs.Flush(true);
+            }
+            sw.Stop();
+            result.SmallWriteLatencyMs = sw.Elapsed.TotalMilliseconds;
+
+            // Read latency (4KB)
+            sw.Restart();
+            using (var fs = new FileStream(
+                       testFilePath,
+                       FileMode.Open,
+                       FileAccess.Read,
+                       FileShare.Read))
+            {
+                fs.Position = 0;
+                fs.Read(buffer, 0, buffer.Length);
+            }
+            sw.Stop();
+            result.SmallReadLatencyMs = sw.Elapsed.TotalMilliseconds;
+        }
+        catch (IOException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
+        }
+    }
+
+    private void AppendError(ShareHealthResult result, Exception ex)
+    {
+        if (string.IsNullOrEmpty(result.ErrorMessage))
+        {
+            result.ErrorMessage = ex.ToString();
+        }
+        else
+        {
+            result.ErrorMessage += Environment.NewLine + ex;
+        }
+    }
+
+    private void RunDirectoryListingTest(ShareHealthResult result)
+    {
+        try
+        {
+            var sw = Stopwatch.StartNew();
+
+            var dir = _config.SharePath; 
+                                        
+            _ = Directory.EnumerateFileSystemEntries(dir).ToList();
+
+            sw.Stop();
+            result.DirectoryListDurationSeconds = sw.Elapsed.TotalSeconds;
+        }
+        catch (IOException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
+        }
+    }
+
     #endregion
 }
