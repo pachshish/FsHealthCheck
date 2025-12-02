@@ -44,6 +44,8 @@ public sealed class ShareHealthChecker : IShareHealthChecker
         {
             EnsureHealthDirectoryExists();
 
+            RunConnectionOpenTest(result);
+
             // Capacity
             UpdateCapacity(result);
 
@@ -93,6 +95,51 @@ public sealed class ShareHealthChecker : IShareHealthChecker
         if (!Directory.Exists(_config.HealthDirectory))
         {
             Directory.CreateDirectory(_config.HealthDirectory);
+        }
+    }
+
+    private void RunConnectionOpenTest(ShareHealthResult result)
+    {
+        try
+        {
+            // קובץ זמני ייעודי לבדיקה הזו
+            var fileName = $"fs_health_conn_{Guid.NewGuid():N}.tmp";
+            var path = Path.Combine(_config.HealthDirectory, fileName);
+
+            var sw = Stopwatch.StartNew();
+            using (var fs = new FileStream(
+                       path,
+                       FileMode.OpenOrCreate,
+                       FileAccess.ReadWrite,
+                       FileShare.None))
+            {
+                // לא צריך לכתוב כלום – מספיק לפתוח ולסגור
+            }
+            sw.Stop();
+
+            result.ConnectionOpenLatencyMs = sw.Elapsed.TotalMilliseconds;
+
+            // מחיקה – לא רוצים להשאיר לכלוך
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (IOException ex)
+            {
+                result.IoErrorCount++;
+                AppendError(result, ex);
+            }
+        }
+        catch (IOException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            result.IoErrorCount++;
+            AppendError(result, ex);
         }
     }
 

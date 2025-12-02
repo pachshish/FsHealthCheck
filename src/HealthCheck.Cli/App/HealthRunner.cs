@@ -98,6 +98,15 @@ public sealed class HealthRunner
         {
             Log("Write: N/A");
         }
+        // Connection open latency
+        if (res.ConnectionOpenLatencyMs.HasValue)
+        {
+            Log($"Connection open latency: {res.ConnectionOpenLatencyMs.Value:F2} ms.");
+        }
+        else
+        {
+            Log("Connection open latency: N/A");
+        }
 
         // Read – המדידה היחידה (ב-Windows unbuffered, ב-Linux best-effort)
         if (res.ReadUnbufferedDurationSeconds.HasValue &&

@@ -55,6 +55,12 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
             "fs_share_io_errors_total",
             "Total I/O errors encountered during health checks per share",
             new CounterConfiguration { LabelNames = new[] { "share" } });
+    private static readonly Gauge ConnectionOpenLatencyGauge =
+    Metrics.CreateGauge(
+        "fs_share_connection_open_latency_ms",
+        "Connection open latency (ms) per share",
+        "share");
+
 
     public void UpdateMetrics(ShareHealthResult res)
     {
@@ -99,5 +105,19 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
         // ✅ חדשים – errors: counter → מוסיפים את הכמות של הריצה הזו
         if (res.IoErrorCount > 0)
             IoErrorsTotal.WithLabels(labels).Inc(res.IoErrorCount);
+
+        if (res.ConnectionOpenLatencyMs.HasValue)
+        {
+            ConnectionOpenLatencyGauge
+                .WithLabels(res.ShareName)
+                .Set(res.ConnectionOpenLatencyMs.Value);
+        }
+        else
+        {
+            ConnectionOpenLatencyGauge
+                .WithLabels(res.ShareName)
+                .Set(double.NaN);
+        }
+
     }
 }
