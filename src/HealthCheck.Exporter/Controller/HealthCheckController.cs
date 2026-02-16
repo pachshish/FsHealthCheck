@@ -26,10 +26,7 @@ public class HealthCheckController : ControllerBase
         _metricsUpdater = metricsUpdater;
     }
 
-    /// <summary>
-    /// מריץ בדיקת בריאות עכשיו, לכל ה-shares.
-    /// אפשר לבחור אם להריץ גם stress (עם הפרמטר withStress).
-    /// </summary>
+
     [HttpPost("run")]
     public async Task<IActionResult> RunNow([FromQuery] bool withStress = false, CancellationToken ct = default)
     {
@@ -50,10 +47,8 @@ public class HealthCheckController : ControllerBase
                 var checker = _checkerFactory.Create(shareCfg);
                 var res = await checker.RunChecksAsync();
 
-                // מעדכן את המטריקות ב-Prometheus
                 _metricsUpdater.UpdateMetrics(res);
 
-                // מכין אובייקט קטן להחזיר ב-JSON
                 results.Add(new
                 {
                     res.ShareName,
@@ -78,7 +73,6 @@ public class HealthCheckController : ControllerBase
             }
             catch (Exception ex)
             {
-                // במקרה של שגיאה, מחזירים פריט עם Success=false
                 results.Add(new
                 {
                     ShareName = shareCfg.ShareName,

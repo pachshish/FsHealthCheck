@@ -34,32 +34,19 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
 
     private static readonly Gauge SmallReadLatencyMs =
         Metrics.CreateGauge(
-            "fs_share_small_read_latency_ms",
-            "Small 4KB read latency (ms) per share",
-            new GaugeConfiguration { LabelNames = new[] { "share" } });
+            "fs_share_small_read_latency_ms", "Small 4KB read latency (ms) per share", new GaugeConfiguration { LabelNames = new[] { "share" } });
 
     private static readonly Gauge SmallWriteLatencyMs =
-        Metrics.CreateGauge(
-            "fs_share_small_write_latency_ms",
-            "Small 4KB write latency (ms) per share",
-            new GaugeConfiguration { LabelNames = new[] { "share" } });
+        Metrics.CreateGauge("fs_share_small_write_latency_ms","Small 4KB write latency (ms) per share",new GaugeConfiguration { LabelNames = new[] { "share" } });
 
     private static readonly Gauge DirectoryListDurationSeconds =
-        Metrics.CreateGauge(
-            "fs_share_dirlist_duration_seconds",
-            "Directory listing duration (seconds) for representative directory per share",
-            new GaugeConfiguration { LabelNames = new[] { "share" } });
+        Metrics.CreateGauge("fs_share_dirlist_duration_seconds","Directory listing duration (seconds) for representative directory per share",new GaugeConfiguration { LabelNames = new[] { "share" } });
 
     private static readonly Counter IoErrorsTotal =
-        Metrics.CreateCounter(
-            "fs_share_io_errors_total",
-            "Total I/O errors encountered during health checks per share",
-            new CounterConfiguration { LabelNames = new[] { "share" } });
+        Metrics.CreateCounter("fs_share_io_errors_total","Total I/O errors encountered during health checks per share",new CounterConfiguration { LabelNames = new[] { "share" } });
+
     private static readonly Gauge ConnectionOpenLatencyGauge =
-    Metrics.CreateGauge(
-        "fs_share_connection_open_latency_ms",
-        "Connection open latency (ms) per share",
-        "share");
+    Metrics.CreateGauge("fs_share_connection_open_latency_ms","Connection open latency (ms) per share","share");
 
 
     public void UpdateMetrics(ShareHealthResult res)
@@ -68,7 +55,6 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
 
         if (!res.Success)
         {
-            // אפשר בעתיד להוסיף metric לשגיאה, כרגע לא עושים כלום
             return;
         }
 
@@ -102,7 +88,6 @@ public sealed class HealthMetricsUpdater : IHealthMetricsUpdater
         if (res.DirectoryListDurationSeconds.HasValue)
             DirectoryListDurationSeconds.WithLabels(labels).Set(res.DirectoryListDurationSeconds.Value);
 
-        // ✅ חדשים – errors: counter → מוסיפים את הכמות של הריצה הזו
         if (res.IoErrorCount > 0)
             IoErrorsTotal.WithLabels(labels).Inc(res.IoErrorCount);
 
