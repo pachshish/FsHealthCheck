@@ -11,6 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.4" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Swagger" Version="10.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HealthCheck.Core\HealthCheck.Core.csproj" />
   </ItemGroup>
 

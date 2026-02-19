@@ -28,6 +28,8 @@ public class HealthCheckController : ControllerBase
 
 
     [HttpPost("run")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+
     public async Task<IActionResult> RunNow([FromQuery] bool withStress = false, CancellationToken ct = default)
     {
         var results = new List<object>();

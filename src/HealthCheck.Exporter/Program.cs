@@ -15,7 +15,7 @@ builder.Services.AddSingleton(healthConfig);
 builder.Services.AddSingleton<IShareStressRunner, ShareStressRunner>();
 builder.Services.AddSingleton<IShareHealthCheckerFactory, ShareHealthCheckerFactory>();
 
-// Updater for meatrics, used by the BackgroundService and the Controller
+// Updater for metrics, used by the BackgroundService and the Controller
 builder.Services.AddSingleton<IHealthMetricsUpdater, HealthMetricsUpdater>();
 
 // Controllers + HostedService
@@ -24,12 +24,22 @@ builder.Services.AddHostedService<HealthMetricsBackgroundService>();
 
 builder.Services.AddRouting();
 
+// Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpMetrics();
 
-app.MapControllers();         
-app.MapMetrics("/metrics");   
+app.MapControllers();
+app.MapMetrics("/metrics");
 
 app.Urls.Add("http://0.0.0.0:5000");
 
