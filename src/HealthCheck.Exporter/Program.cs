@@ -22,6 +22,9 @@ builder.Services.AddSingleton<IHealthMetricsUpdater, HealthMetricsUpdater>();
 builder.Services.AddControllers();
 builder.Services.AddHostedService<HealthMetricsBackgroundService>();
 
+builder.Services.AddSingleton<INfsPassiveMetricsCollector, NfsPassiveMetricsCollector>();
+builder.Services.AddHostedService<NfsPassiveMetricsBackgroundService>();
+
 builder.Services.AddRouting();
 
 // Swagger

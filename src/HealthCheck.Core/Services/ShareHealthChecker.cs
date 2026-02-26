@@ -81,7 +81,6 @@ public sealed class ShareHealthChecker : IShareHealthChecker
                 }
                 catch (Exception ex)
                 {
-                    // לא נכשיל את כל הריצה בגלל מחיקה, אבל נוסיף ללוג
                     AppendError(result, ex);
                 }
             }
