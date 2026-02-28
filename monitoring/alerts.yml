@@ -1,0 +1,64 @@
+groups:
+  - name: fshealth_nfs_passive
+    rules:
+      # High RPC retransmission ratio (network congestion / server overload / packet loss)
+      - alert: NfsRpcHighRetransRatio
+        expr: |
+          (
+            increase(fs_nfs_rpc_retrans_total[5m])
+            /
+            clamp_min(increase(fs_nfs_rpc_calls_total[5m]), 1)
+          ) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High NFS RPC retransmission ratio"
+          description: "RPC retrans/calls > 2% for 10m. Possible packet loss, congestion, or overloaded NFS server."
+
+      # Per-mount READ retrans ratio (helps pin-point a specific PVC/mount)
+      - alert: NfsMountReadHighRetransRatio
+        expr: |
+          (
+            increase(fs_nfs_op_retrans_total{op="READ"}[5m])
+            /
+            clamp_min(increase(fs_nfs_op_calls_total{op="READ"}[5m]), 1)
+          ) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High NFS READ retrans ratio on mount"
+          description: "READ retrans/calls > 2% for 10m on mount {{ $labels.mount }} (share={{ $labels.share }})."
+
+  - name: fshealth_active_checks
+    rules:
+      # Active checks found I/O errors
+      - alert: FsShareIoErrors
+        expr: increase(fs_share_io_errors_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "I/O errors during active health checks"
+          description: "Share {{ $labels.share }} had I/O errors in the last 5 minutes."
+
+      # Small read latency is high (tune thresholds to your environment)
+      - alert: FsShareSmallReadLatencyHigh
+        expr: fs_share_small_read_latency_ms > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High small-read latency"
+          description: "Small 4KB read latency on share {{ $labels.share }} is > 50ms for 10m."
+
+      # Throughput dropped unusually low (only fires if metric exists and is >0)
+      - alert: FsShareReadThroughputLow
+        expr: fs_share_read_unbuffered_throughput_bytes > 0 and fs_share_read_unbuffered_throughput_bytes < 10485760
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low unbuffered read throughput"
+          description: "Unbuffered read throughput on share {{ $labels.share }} < 10MB/s for 15m."
