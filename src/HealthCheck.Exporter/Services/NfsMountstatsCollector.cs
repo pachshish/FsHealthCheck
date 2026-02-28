@@ -169,9 +169,9 @@ public sealed class NfsMountstatsCollector : INfsMountstatsCollector
                     yield return current;
 
                 current = new MountBlock(
-                    header: line,
-                    mountPoint: ExtractMountPoint(line),
-                    lines: new List<string>());
+                    Header: line,
+                    MountPoint: ExtractMountPoint(line),
+                    Lines: new List<string>());
             }
 
             current?.Lines.Add(line);
