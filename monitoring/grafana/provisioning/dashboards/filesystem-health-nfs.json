@@ -367,490 +367,227 @@
       "panels": []
     },
     {
-      "type": "timeseries",
-      "title": "NFS throughput (MB/s)",
       "id": 21,
+      "type": "timeseries",
+      "title": "NFS Throughput (READ / WRITE)",
+      "description": "Shows real read/write throughput per mount using the exporter metrics fs_nfs_mount_read_throughput_bytes_per_second and fs_nfs_mount_write_throughput_bytes_per_second. This replaces older bytes_total style panels with direct throughput.",
       "gridPos": {
-        "x": 0,
-        "y": 50,
+        "h": 8,
         "w": 24,
-        "h": 7
+        "x": 0,
+        "y": 50
       },
-      "targets": [
-        {
-          "expr": "rate(fs_nfs_mount_read_bytes_total[1m]) / 1024 / 1024",
-          "legendFormat": "read {{share}} {{mount}}",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(fs_nfs_mount_write_bytes_total[1m]) / 1024 / 1024",
-          "legendFormat": "write {{share}} {{mount}}",
-          "refId": "B"
-        }
-      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "MBps",
-          "min": 0
+          "decimals": 2
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^read"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#73BF69"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^write"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#FF9830"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
+        "tooltip": { "mode": "multi" }
       },
-      "datasource": null
+      "targets": [
+        {
+          "expr": "fs_nfs_mount_read_throughput_bytes_per_second / 1024 / 1024",
+          "legendFormat": "READ {{share}} {{mount}}",
+          "refId": "A"
+        },
+        {
+          "expr": "fs_nfs_mount_write_throughput_bytes_per_second / 1024 / 1024",
+          "legendFormat": "WRITE {{share}} {{mount}}",
+          "refId": "B"
+        }
+      ]
     },
     {
-      "type": "timeseries",
-      "title": "NFS ops/sec (READ & WRITE)",
       "id": 22,
+      "type": "timeseries",
+      "title": "NFS Avg RTT (network / RPC latency)",
+      "description": "Shows average RPC round trip time for READ and WRITE using fs_nfs_op_avg_rtt_milliseconds. If this rises, it usually points to network latency, packet delay, congestion, or slow NFS RPC response path.",
       "gridPos": {
-        "x": 0,
-        "y": 57,
+        "h": 8,
         "w": 12,
-        "h": 7
+        "x": 0,
+        "y": 58
       },
-      "targets": [
-        {
-          "expr": "rate(fs_nfs_op_calls_total{op=\"READ\"}[1m])",
-          "legendFormat": "read ops {{share}} {{mount}}",
-          "refId": "A"
-        },
-        {
-          "expr": "rate(fs_nfs_op_calls_total{op=\"WRITE\"}[1m])",
-          "legendFormat": "write ops {{share}} {{mount}}",
-          "refId": "B"
-        }
-      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
-          "min": 0
+          "unit": "ms",
+          "decimals": 2
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^read"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#73BF69"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^write"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#FF9830"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
+        "tooltip": { "mode": "multi" }
       },
-      "datasource": null
+      "targets": [
+        {
+          "expr": "fs_nfs_op_avg_rtt_milliseconds{op=\"READ\"}",
+          "legendFormat": "READ RTT {{share}} {{mount}}",
+          "refId": "A"
+        },
+        {
+          "expr": "fs_nfs_op_avg_rtt_milliseconds{op=\"WRITE\"}",
+          "legendFormat": "WRITE RTT {{share}} {{mount}}",
+          "refId": "B"
+        }
+      ]
     },
     {
-      "type": "timeseries",
-      "title": "NFS metadata ops/sec (GETATTR+LOOKUP+READDIR)",
       "id": 23,
+      "type": "timeseries",
+      "title": "NFS Backend Delay (Execute - RTT)",
+      "description": "Key diagnostic panel for server or storage-side delay. Calculated as avg execute minus avg RTT. If this grows while retransmissions stay low, the delay usually comes from server processing or storage backend rather than the network.",
       "gridPos": {
-        "x": 12,
-        "y": 57,
+        "h": 8,
         "w": 12,
-        "h": 7
+        "x": 12,
+        "y": 58
       },
-      "targets": [
-        {
-          "expr": "sum by (share,mount) (rate(fs_nfs_op_calls_total{op=~\"GETATTR|LOOKUP|READDIR\"}[1m]))",
-          "legendFormat": "metadata ops {{share}} {{mount}}",
-          "refId": "A"
-        }
-      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "unit": "ms",
+          "decimals": 2,
           "min": 0
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "datasource": null
-    },
-    {
-      "type": "timeseries",
-      "title": "NFS small-files ops/sec (CREATE & REMOVE)",
-      "id": 24,
-      "gridPos": {
-        "x": 0,
-        "y": 64,
-        "w": 12,
-        "h": 7
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "rate(fs_nfs_op_calls_total{op=\"CREATE\"}[1m])",
-          "legendFormat": "create {{share}} {{mount}}",
+          "expr": "clamp_min(fs_nfs_op_avg_execute_milliseconds{op=\"READ\"} - fs_nfs_op_avg_rtt_milliseconds{op=\"READ\"}, 0)",
+          "legendFormat": "READ backend delay {{share}} {{mount}}",
           "refId": "A"
         },
         {
-          "expr": "rate(fs_nfs_op_calls_total{op=\"REMOVE\"}[1m])",
-          "legendFormat": "remove {{share}} {{mount}}",
+          "expr": "clamp_min(fs_nfs_op_avg_execute_milliseconds{op=\"WRITE\"} - fs_nfs_op_avg_rtt_milliseconds{op=\"WRITE\"}, 0)",
+          "legendFormat": "WRITE backend delay {{share}} {{mount}}",
           "refId": "B"
         }
-      ],
+      ]
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "NFS Retrans Ratio (network suspicion)",
+      "description": "Shows retransmission ratio per operation using fs_nfs_op_retrans_ratio. Values above 0 indicate retries. If this rises together with RTT, that strongly suggests network issues or RPC path instability.",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "unit": "percentunit",
+          "decimals": 4,
           "min": 0
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^create"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#5794F2"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "^remove"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2495C"
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
+        "tooltip": { "mode": "multi" }
       },
-      "datasource": null
+      "targets": [
+        {
+          "expr": "fs_nfs_op_retrans_ratio{op=\"READ\"}",
+          "legendFormat": "READ retrans {{share}} {{mount}}",
+          "refId": "A"
+        },
+        {
+          "expr": "fs_nfs_op_retrans_ratio{op=\"WRITE\"}",
+          "legendFormat": "WRITE retrans {{share}} {{mount}}",
+          "refId": "B"
+        }
+      ]
     },
     {
-      "type": "timeseries",
-      "title": "NFS open/close ops/sec",
       "id": 25,
-      "gridPos": {
-        "x": 12,
-        "y": 64,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
-        {
-          "expr": "rate(fs_nfs_op_calls_total{op=~\"OPEN|CLOSE\"}[1m])",
-          "legendFormat": "open/close {{share}} {{mount}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "datasource": null
-    },
-    {
       "type": "timeseries",
-      "title": "NFS commit ops/sec",
-      "id": 26,
+      "title": "NFS Network vs Server Delay",
+      "description": "Comparison panel to quickly separate network delay from server or storage delay. RTT lines represent network/RPC path latency. Backend delay lines represent execute minus RTT, which points more to server/storage/backend. If RTT rises more than backend delay, suspect network. If backend delay rises while RTT stays reasonable and retrans is low, suspect server or storage.",
       "gridPos": {
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 71,
-        "w": 12,
-        "h": 7
+        "y": 74
       },
-      "targets": [
-        {
-          "expr": "rate(fs_nfs_op_calls_total{op=\"COMMIT\"}[1m])",
-          "legendFormat": "commit {{share}} {{mount}}",
-          "refId": "A"
-        }
-      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "unit": "ops",
+          "unit": "ms",
+          "decimals": 2,
           "min": 0
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "datasource": null
-    },
-    {
-      "type": "timeseries",
-      "title": "NFS RPC retransmits/sec",
-      "id": 27,
-      "gridPos": {
-        "x": 12,
-        "y": 71,
-        "w": 12,
-        "h": 7
+        "tooltip": { "mode": "multi" }
       },
       "targets": [
         {
-          "expr": "rate(fs_nfs_rpc_retrans_total[1m])",
-          "legendFormat": "rpc retrans/sec",
+          "expr": "fs_nfs_op_avg_rtt_milliseconds{op=\"READ\"}",
+          "legendFormat": "READ network RTT {{share}} {{mount}}",
           "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "min": 0
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2495C"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "datasource": null
-    },
-    {
-      "type": "timeseries",
-      "title": "Top NFS ops/sec by op type (top 10)",
-      "id": 28,
-      "gridPos": {
-        "x": 0,
-        "y": 78,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
         {
-          "expr": "topk(10, sum by (op) (rate(fs_nfs_op_calls_total[1m])))",
-          "legendFormat": "{{op}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "min": 0
+          "expr": "clamp_min(fs_nfs_op_avg_execute_milliseconds{op=\"READ\"} - fs_nfs_op_avg_rtt_milliseconds{op=\"READ\"}, 0)",
+          "legendFormat": "READ server/backend {{share}} {{mount}}",
+          "refId": "B"
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "datasource": null
-    },
-    {
-      "type": "timeseries",
-      "title": "NFS retransmit ratio (%)",
-      "id": 29,
-      "gridPos": {
-        "x": 12,
-        "y": 78,
-        "w": 12,
-        "h": 7
-      },
-      "targets": [
         {
-          "expr": "(rate(fs_nfs_rpc_retrans_total[5m]) / rate(fs_nfs_rpc_calls_total[5m])) * 100",
-          "legendFormat": "retrans %",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 2
-              }
-            ]
-          }
+          "expr": "fs_nfs_op_avg_rtt_milliseconds{op=\"WRITE\"}",
+          "legendFormat": "WRITE network RTT {{share}} {{mount}}",
+          "refId": "C"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": ".*"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#F2495C"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
+        {
+          "expr": "clamp_min(fs_nfs_op_avg_execute_milliseconds{op=\"WRITE\"} - fs_nfs_op_avg_rtt_milliseconds{op=\"WRITE\"}, 0)",
+          "legendFormat": "WRITE server/backend {{share}} {{mount}}",
+          "refId": "D"
         }
-      },
-      "datasource": null
+      ]
     }
-  ],
-  "time": {
-    "from": "now-30m",
-    "to": "now"
-  },
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m"
-    ]
-  }
+  ]
 }
